@@ -31,13 +31,13 @@ import { ChoiceOverlay } from "@/ui/ChoiceOverlay";
 
 /** Tile type to color mapping for board rendering */
 const TILE_COLORS: Record<string, number> = {
-  life: 0x66bb6a,
-  choice: 0xffa726,
-  branch: 0xef5350,
-  festival: 0xab47bc,
-  rest: 0x42a5f5,
-  happening: 0xffee58,
-  romance: 0xec407a,
+  life: 0x5a8a5a,
+  choice: 0xd4a35a,
+  branch: 0xc85a5a,
+  festival: 0x8a5aaa,
+  rest: 0x5a7aaa,
+  happening: 0xccc45a,
+  romance: 0xc85a8a,
 };
 
 /** Tile type to emoji icon mapping */
@@ -53,10 +53,10 @@ const TILE_ICONS: Record<string, string> = {
 
 /** Season background zone colors */
 const SEASON_ZONE_COLORS: Record<string, number> = {
-  spring: 0xfce4ec,
-  summer: 0xe3f2fd,
-  autumn: 0xfff3e0,
-  winter: 0xede7f6,
+  spring: 0xff9eb1,
+  summer: 0x7ec8e3,
+  autumn: 0xffcb77,
+  winter: 0xc8b6e2,
 };
 
 /** Season labels with emoji */
@@ -77,12 +77,12 @@ const SEASON_ZONES: Record<string, { y: number; h: number }> = {
 
 /** Route line colors for branch paths */
 const ROUTE_LINE_COLORS: Record<string, number> = {
-  farm: 0x66bb6a,
-  shop: 0xffa726,
-  village: 0xab47bc,
+  farm: 0x5a8a5a,
+  shop: 0xd4a35a,
+  village: 0x8a5aaa,
 };
 
-const TILE_SIZE = 20;
+const TILE_SIZE = 28;
 const PLAYER_SIZE = 10;
 
 export class GameScene extends Phaser.Scene {
@@ -139,7 +139,7 @@ export class GameScene extends Phaser.Scene {
 
     // Background
     const bg = this.add.graphics();
-    bg.fillStyle(0x1a2a1a, 1);
+    bg.fillStyle(0x2b2b3a, 1);
     bg.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
     // Draw the board
@@ -161,7 +161,8 @@ export class GameScene extends Phaser.Scene {
     this.turnText = this.add
       .text(GAME_WIDTH - 10, 10, "", {
         fontSize: "14px",
-        color: "#aaaaaa",
+        fontFamily: '"DotGothic16", monospace',
+        color: "#f5e6d3",
       })
       .setOrigin(1, 0);
 
@@ -181,8 +182,9 @@ export class GameScene extends Phaser.Scene {
     this.tutorialText = this.add
       .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, "", {
         fontSize: "16px",
-        color: "#ffffff",
-        backgroundColor: "#336633cc",
+        fontFamily: '"DotGothic16", monospace',
+        color: "#f5e6d3",
+        backgroundColor: "#4a4a68",
         padding: { x: 16, y: 10 },
         wordWrap: { width: 500 },
         align: "center",
@@ -233,14 +235,15 @@ export class GameScene extends Phaser.Scene {
     for (const season of ["spring", "summer", "autumn", "winter"] as const) {
       const zone = SEASON_ZONES[season];
       const zoneColor = SEASON_ZONE_COLORS[season];
-      this.boardGraphics.fillStyle(zoneColor, 0.15);
+      this.boardGraphics.fillStyle(zoneColor, 0.25);
       this.boardGraphics.fillRoundedRect(10, zone.y, GAME_WIDTH - 20, zone.h, 8);
 
       // Season label
       const label = this.add
         .text(18, zone.y + 4, SEASON_LABELS[season], {
           fontSize: "10px",
-          color: "#cccccc",
+          fontFamily: '"DotGothic16", monospace',
+          color: "#f5e6d3",
         })
         .setDepth(5);
       this.boardTexts.push(label);
@@ -249,7 +252,7 @@ export class GameScene extends Phaser.Scene {
     // (b) Connection lines
 
     // Define main-path connections per season
-    // Spring: left→right
+    // Spring: left->right
     const springMainPath = ["sp-life-1", "sp-romance", "sp-branch"];
     const springRoutes = {
       farm: ["sp-branch", "sp-farm-1", "sp-farm-2", "sp-festival"],
@@ -257,7 +260,7 @@ export class GameScene extends Phaser.Scene {
       village: ["sp-branch", "sp-village-1", "sp-village-2", "sp-festival"],
     };
 
-    // Summer: right→left
+    // Summer: right->left
     const summerMainPath = ["su-life-1", "su-happening", "su-branch"];
     const summerRoutes = {
       farm: ["su-branch", "su-farm-1", "su-farm-2", "su-festival"],
@@ -265,7 +268,7 @@ export class GameScene extends Phaser.Scene {
       village: ["su-branch", "su-village-1", "su-village-2", "su-festival"],
     };
 
-    // Autumn: left→right
+    // Autumn: left->right
     const autumnMainPath = ["au-life-1", "au-choice", "au-branch"];
     const autumnRoutes = {
       farm: ["au-branch", "au-farm-1", "au-farm-2", "au-festival"],
@@ -273,7 +276,7 @@ export class GameScene extends Phaser.Scene {
       village: ["au-branch", "au-village-1", "au-village-2", "au-festival"],
     };
 
-    // Winter: right→left
+    // Winter: right->left
     const winterMainPath = ["wi-life-1", "wi-romance", "wi-branch"];
     const winterRoutes = {
       farm: ["wi-branch", "wi-farm-1", "wi-farm-2", "wi-festival"],
@@ -312,17 +315,17 @@ export class GameScene extends Phaser.Scene {
     };
 
     // Draw main paths (white, thick)
-    drawPath(springMainPath, 3, 0xffffff, 0.5);
-    drawPath(summerMainPath, 3, 0xffffff, 0.5);
-    drawPath(autumnMainPath, 3, 0xffffff, 0.5);
-    drawPath(winterMainPath, 3, 0xffffff, 0.5);
+    drawPath(springMainPath, 3, 0xffffff, 0.7);
+    drawPath(summerMainPath, 3, 0xffffff, 0.7);
+    drawPath(autumnMainPath, 3, 0xffffff, 0.7);
+    drawPath(winterMainPath, 3, 0xffffff, 0.7);
 
     // Draw branch routes (colored, thinner)
     const allRoutes = [springRoutes, summerRoutes, autumnRoutes, winterRoutes];
     for (const seasonRoutes of allRoutes) {
       for (const [route, path] of Object.entries(seasonRoutes)) {
         const routeColor = ROUTE_LINE_COLORS[route] ?? 0xffffff;
-        drawPath(path, 2, routeColor, 0.4);
+        drawPath(path, 2, routeColor, 0.5);
       }
     }
 
@@ -387,7 +390,7 @@ export class GameScene extends Phaser.Scene {
       if (icon) {
         const iconText = this.add
           .text(x, y, icon, {
-            fontSize: "12px",
+            fontSize: "16px",
           })
           .setOrigin(0.5)
           .setDepth(10);
@@ -403,7 +406,8 @@ export class GameScene extends Phaser.Scene {
       const startText = this.add
         .text(firstTile.position.x - TILE_SIZE - 4, firstTile.position.y, "START", {
           fontSize: "10px",
-          color: "#ffff00",
+          fontFamily: '"DotGothic16", monospace',
+          color: "#ffe66d",
           fontStyle: "bold",
         })
         .setOrigin(1, 0.5)
@@ -415,7 +419,8 @@ export class GameScene extends Phaser.Scene {
       const goalText = this.add
         .text(lastTile.position.x - TILE_SIZE - 4, lastTile.position.y, "GOAL", {
           fontSize: "10px",
-          color: "#ffff00",
+          fontFamily: '"DotGothic16", monospace',
+          color: "#ffe66d",
           fontStyle: "bold",
         })
         .setOrigin(1, 0.5)

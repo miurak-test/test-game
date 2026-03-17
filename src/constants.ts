@@ -9,12 +9,17 @@ export const GAME_WIDTH = 800;
 export const GAME_HEIGHT = 600;
 
 export const COLORS = {
-  BACKGROUND: 0x2d2d2d,
+  BACKGROUND: 0x2b2b3a,
   WHITE: 0xffffff,
   BLACK: 0x000000,
-  PRIMARY: 0x4a90d9,
-  SECONDARY: 0x7ec850,
-  ACCENT: 0xf5a623,
+  PRIMARY: 0x5a8a5a,
+  SECONDARY: 0x7ab87a,
+  ACCENT: 0xffe66d,
+  UI_PANEL: 0x4a4a68,
+  SPRING: 0xff9eb1,
+  SUMMER: 0x7ec8e3,
+  AUTUMN: 0xffcb77,
+  WINTER: 0xc8b6e2,
 } as const;
 
 export const SEASONS: Season[] = ["spring", "summer", "autumn", "winter"];

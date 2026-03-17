@@ -26,20 +26,25 @@ export class EventOverlay extends Phaser.GameObjects.Container {
     const panelX = GAME_WIDTH / 2 - PANEL_WIDTH / 2;
     const panelY = GAME_HEIGHT / 2 - PANEL_HEIGHT / 2;
 
-    // Semi-transparent background panel
+    // RPG conversation window style background
     this.bg = scene.add.graphics();
-    this.bg.fillStyle(0x000000, 0.75);
-    this.bg.fillRoundedRect(panelX, panelY, PANEL_WIDTH, PANEL_HEIGHT, 8);
-    this.bg.lineStyle(2, 0xffffff, 0.4);
-    this.bg.strokeRoundedRect(panelX, panelY, PANEL_WIDTH, PANEL_HEIGHT, 8);
+    // Dark shadow
+    this.bg.fillStyle(0x1a1a2a, 0.6);
+    this.bg.fillRoundedRect(panelX + 2, panelY + 2, PANEL_WIDTH, PANEL_HEIGHT, 4);
+    // Main panel
+    this.bg.fillStyle(0x4a4a68, 0.95);
+    this.bg.fillRoundedRect(panelX, panelY, PANEL_WIDTH, PANEL_HEIGHT, 4);
+    // White border
+    this.bg.lineStyle(2, 0xffffff, 0.8);
+    this.bg.strokeRoundedRect(panelX, panelY, PANEL_WIDTH, PANEL_HEIGHT, 4);
     this.add(this.bg);
 
     // Event title
     this.titleText = scene.add
       .text(GAME_WIDTH / 2, panelY + 40, "", {
         fontSize: "22px",
-        color: "#ffdd44",
-        fontStyle: "bold",
+        fontFamily: '"DotGothic16", monospace',
+        color: "#ffe66d",
       })
       .setOrigin(0.5);
     this.add(this.titleText);
@@ -48,7 +53,8 @@ export class EventOverlay extends Phaser.GameObjects.Container {
     this.descText = scene.add
       .text(GAME_WIDTH / 2, panelY + 90, "", {
         fontSize: "16px",
-        color: "#ffffff",
+        fontFamily: '"DotGothic16", monospace',
+        color: "#f5e6d3",
         wordWrap: { width: PANEL_WIDTH - 60 },
         align: "center",
       })
@@ -59,8 +65,8 @@ export class EventOverlay extends Phaser.GameObjects.Container {
     this.npcText = scene.add
       .text(GAME_WIDTH / 2, panelY + 200, "", {
         fontSize: "14px",
-        color: "#aaddff",
-        fontStyle: "italic",
+        fontFamily: '"DotGothic16", monospace',
+        color: "#7ec8e3",
       })
       .setOrigin(0.5);
     this.add(this.npcText);

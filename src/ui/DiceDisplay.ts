@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 
-const DICE_SIZE = 60;
-const DOT_RADIUS = 5;
+const DICE_SIZE = 90;
+const DOT_RADIUS = 7;
 const ROLL_INTERVAL = 80;
 const ROLL_FRAMES = 10;
 
@@ -9,34 +9,34 @@ const ROLL_FRAMES = 10;
 const DOT_POSITIONS: Record<number, { x: number; y: number }[]> = {
   1: [{ x: 0, y: 0 }],
   2: [
-    { x: -14, y: -14 },
-    { x: 14, y: 14 },
+    { x: -21, y: -21 },
+    { x: 21, y: 21 },
   ],
   3: [
-    { x: -14, y: -14 },
+    { x: -21, y: -21 },
     { x: 0, y: 0 },
-    { x: 14, y: 14 },
+    { x: 21, y: 21 },
   ],
   4: [
-    { x: -14, y: -14 },
-    { x: 14, y: -14 },
-    { x: -14, y: 14 },
-    { x: 14, y: 14 },
+    { x: -21, y: -21 },
+    { x: 21, y: -21 },
+    { x: -21, y: 21 },
+    { x: 21, y: 21 },
   ],
   5: [
-    { x: -14, y: -14 },
-    { x: 14, y: -14 },
+    { x: -21, y: -21 },
+    { x: 21, y: -21 },
     { x: 0, y: 0 },
-    { x: -14, y: 14 },
-    { x: 14, y: 14 },
+    { x: -21, y: 21 },
+    { x: 21, y: 21 },
   ],
   6: [
-    { x: -14, y: -14 },
-    { x: 14, y: -14 },
-    { x: -14, y: 0 },
-    { x: 14, y: 0 },
-    { x: -14, y: 14 },
-    { x: 14, y: 14 },
+    { x: -21, y: -21 },
+    { x: 21, y: -21 },
+    { x: -21, y: 0 },
+    { x: 21, y: 0 },
+    { x: -21, y: 21 },
+    { x: 21, y: 21 },
   ],
 };
 
@@ -93,18 +93,18 @@ export class DiceDisplay extends Phaser.GameObjects.Container {
     this.diceGraphics.clear();
     const half = DICE_SIZE / 2;
 
-    // Dice body (white rounded rect)
-    this.diceGraphics.fillStyle(0xffffff, 1);
-    this.diceGraphics.fillRoundedRect(-half, -half, DICE_SIZE, DICE_SIZE, 8);
+    // Dice body (dark panel color)
+    this.diceGraphics.fillStyle(0x4a4a68, 1);
+    this.diceGraphics.fillRoundedRect(-half, -half, DICE_SIZE, DICE_SIZE, 6);
 
-    // Border
-    this.diceGraphics.lineStyle(2, 0x333333, 1);
-    this.diceGraphics.strokeRoundedRect(-half, -half, DICE_SIZE, DICE_SIZE, 8);
+    // Border (white pixel style)
+    this.diceGraphics.lineStyle(2, 0xffffff, 0.8);
+    this.diceGraphics.strokeRoundedRect(-half, -half, DICE_SIZE, DICE_SIZE, 6);
 
-    // Dots
+    // Dots (cream color)
     const dots = DOT_POSITIONS[value];
     if (dots) {
-      this.diceGraphics.fillStyle(0x333333, 1);
+      this.diceGraphics.fillStyle(0xf5e6d3, 1);
       for (const dot of dots) {
         this.diceGraphics.fillCircle(dot.x, dot.y, DOT_RADIUS);
       }

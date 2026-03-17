@@ -7,27 +7,37 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
+    // Background
+    this.cameras.main.setBackgroundColor(0x2b2b3a);
+
     // Logo title
     this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40, "ほのぼの人生すごろく", {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40, "恋も人生もダイス次第", {
         fontSize: "36px",
-        color: "#ffffff",
-        fontStyle: "bold",
+        fontFamily: '"DotGothic16", monospace',
+        color: "#ffe66d",
       })
       .setOrigin(0.5);
 
     // Subtitle
     this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 10, "～四季めぐり～", {
-        fontSize: "24px",
-        color: "#aaddff",
-      })
+      .text(
+        GAME_WIDTH / 2,
+        GAME_HEIGHT / 2 + 10,
+        "～人生、全部賭ける。～",
+        {
+          fontSize: "18px",
+          fontFamily: '"DotGothic16", monospace',
+          color: "#f5e6d3",
+        },
+      )
       .setOrigin(0.5);
 
     // Loading indicator
     const loadingText = this.add
       .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 80, "Loading...", {
         fontSize: "18px",
+        fontFamily: '"DotGothic16", monospace',
         color: "#888888",
       })
       .setOrigin(0.5);

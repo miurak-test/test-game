@@ -10,9 +10,9 @@ const AXIS_CONFIG: {
   label: string;
   color: number;
 }[] = [
-  { key: "kurashi", label: "くらし", color: 0x66bb6a },
-  { key: "tsunagari", label: "つながり", color: 0x42a5f5 },
-  { key: "jibun", label: "じぶん", color: 0xab47bc },
+  { key: "kurashi", label: "くらし", color: 0xff9eb1 },
+  { key: "tsunagari", label: "つながり", color: 0x7ec8e3 },
+  { key: "jibun", label: "じぶん", color: 0xc8b6e2 },
 ];
 
 /**
@@ -33,10 +33,12 @@ export class StatusPanel extends Phaser.GameObjects.Container {
     super(scene, x, y);
     scene.add.existing(this);
 
-    // Background panel
+    // Background panel (RPG window style)
     const bg = scene.add.graphics();
-    bg.fillStyle(0x000000, 0.5);
-    bg.fillRoundedRect(0, 0, 420, 70, 6);
+    bg.fillStyle(0x4a4a68, 0.9);
+    bg.fillRoundedRect(0, 0, 420, 70, 4);
+    bg.lineStyle(1, 0xffffff, 0.6);
+    bg.strokeRoundedRect(0, 0, 420, 70, 4);
     this.add(bg);
 
     // Bar graphics layer
@@ -50,13 +52,15 @@ export class StatusPanel extends Phaser.GameObjects.Container {
 
       const label = scene.add.text(8, rowY, cfg.label, {
         fontSize: "12px",
-        color: "#ffffff",
+        fontFamily: '"DotGothic16", monospace',
+        color: "#f5e6d3",
       });
       this.add(label);
 
       const valueText = scene.add.text(280, rowY, "0", {
         fontSize: "12px",
-        color: "#ffffff",
+        fontFamily: '"DotGothic16", monospace',
+        color: "#f5e6d3",
       });
       this.add(valueText);
       this.axisTexts.push(valueText);
@@ -68,7 +72,8 @@ export class StatusPanel extends Phaser.GameObjects.Container {
 
     this.fluctuationText = scene.add.text(330, 10, "", {
       fontSize: "11px",
-      color: "#cccccc",
+      fontFamily: '"DotGothic16", monospace',
+      color: "#f5e6d3",
       lineSpacing: 4,
     });
     this.add(this.fluctuationText);
@@ -131,7 +136,7 @@ export class StatusPanel extends Phaser.GameObjects.Container {
       const width = calculateBarWidth(value);
 
       // Bar background (empty)
-      this.barGraphics.fillStyle(0x333333, 0.8);
+      this.barGraphics.fillStyle(0x2b2b3a, 0.8);
       this.barGraphics.fillRect(barX, rowY + 2, BAR_FULL_WIDTH, 10);
 
       // Bar fill

@@ -20,12 +20,22 @@ export class YearbookMini extends Phaser.GameObjects.Container {
     super(scene, x, y);
     scene.add.existing(this);
 
+    // Retro scroll style background
+    const bgWidth = 680;
+    const bgHeight = 80;
+    const bgGfx = scene.add.graphics();
+    bgGfx.fillStyle(0x4a4a68, 0.9);
+    bgGfx.fillRoundedRect(-bgWidth / 2, -5, bgWidth, bgHeight, 4);
+    bgGfx.lineStyle(1, 0xffffff, 0.6);
+    bgGfx.strokeRoundedRect(-bgWidth / 2, -5, bgWidth, bgHeight, 4);
+    this.add(bgGfx);
+
     // Title
     const title = scene.add
       .text(0, 0, "- 季節のハイライト -", {
         fontSize: "16px",
-        color: "#aaaaaa",
-        fontStyle: "bold",
+        fontFamily: '"DotGothic16", monospace',
+        color: "#ffe66d",
       })
       .setOrigin(0.5, 0);
     this.add(title);
@@ -53,7 +63,8 @@ export class YearbookMini extends Phaser.GameObjects.Container {
       const text = this.scene.add
         .text(x, y, `${label}: ${eventName}`, {
           fontSize: "13px",
-          color: "#cccccc",
+          fontFamily: '"DotGothic16", monospace',
+          color: "#f5e6d3",
           wordWrap: { width: 150 },
         })
         .setOrigin(0.5, 0);

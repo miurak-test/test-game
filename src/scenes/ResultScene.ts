@@ -21,15 +21,27 @@ export class ResultScene extends Phaser.Scene {
 
     // Background
     const bg = this.add.graphics();
-    bg.fillStyle(0x1a1a3a, 1);
+    bg.fillStyle(0x2b2b3a, 1);
     bg.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+    // RPG window panel for score area
+    const panel = this.add.graphics();
+    panel.fillStyle(0x4a4a68, 1);
+    panel.fillRoundedRect(30, 20, GAME_WIDTH - 60, 340, 4);
+    panel.lineStyle(2, 0xffffff, 0.8);
+    panel.strokeRoundedRect(30, 20, GAME_WIDTH - 60, 340, 4);
+    // Shadow
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.3);
+    shadow.fillRoundedRect(32, 22, GAME_WIDTH - 60, 340, 4);
+    shadow.setDepth(-1);
 
     // Title
     this.add
       .text(GAME_WIDTH / 2, 40, "おつかれさま！", {
         fontSize: "36px",
-        color: "#ffdd44",
-        fontStyle: "bold",
+        fontFamily: '"DotGothic16", monospace',
+        color: "#ffe66d",
       })
       .setOrigin(0.5);
 
@@ -41,7 +53,8 @@ export class ResultScene extends Phaser.Scene {
         `${this.gameState.player.name} の一年間の記録`,
         {
           fontSize: "18px",
-          color: "#aaaaaa",
+          fontFamily: '"DotGothic16", monospace',
+          color: "#f5e6d3",
         },
       )
       .setOrigin(0.5);
@@ -57,9 +70,9 @@ export class ResultScene extends Phaser.Scene {
     // 3 axes display
     const axesY = 130;
     const axisLabels = [
-      { label: "くらし", value: axes.kurashi, color: "#66bb6a" },
-      { label: "つながり", value: axes.tsunagari, color: "#42a5f5" },
-      { label: "じぶん", value: axes.jibun, color: "#ffa726" },
+      { label: "くらし", value: axes.kurashi, color: "#ff9eb1" },
+      { label: "つながり", value: axes.tsunagari, color: "#7ec8e3" },
+      { label: "じぶん", value: axes.jibun, color: "#c8b6e2" },
     ];
 
     for (let i = 0; i < axisLabels.length; i++) {
@@ -69,15 +82,16 @@ export class ResultScene extends Phaser.Scene {
       this.add
         .text(x, axesY, label, {
           fontSize: "18px",
+          fontFamily: '"DotGothic16", monospace',
           color,
-          fontStyle: "bold",
         })
         .setOrigin(0.5);
 
       this.add
         .text(x, axesY + 30, `${value}`, {
           fontSize: "28px",
-          color: "#ffffff",
+          fontFamily: '"DotGothic16", monospace',
+          color: "#f5e6d3",
         })
         .setOrigin(0.5);
     }
@@ -87,7 +101,8 @@ export class ResultScene extends Phaser.Scene {
     this.add
       .text(GAME_WIDTH / 2, pillarsY, "[ 5つの柱 ]", {
         fontSize: "14px",
-        color: "#888888",
+        fontFamily: '"DotGothic16", monospace',
+        color: "#f5e6d3",
       })
       .setOrigin(0.5);
 
@@ -107,7 +122,8 @@ export class ResultScene extends Phaser.Scene {
       this.add
         .text(x, pillarsY + 25, `${label}: ${value}`, {
           fontSize: "14px",
-          color: "#cccccc",
+          fontFamily: '"DotGothic16", monospace',
+          color: "#f5e6d3",
         })
         .setOrigin(0.5);
     }
@@ -121,7 +137,8 @@ export class ResultScene extends Phaser.Scene {
           `バランスボーナス: +${balanceBonus}`,
           {
             fontSize: "16px",
-            color: "#ffaa44",
+            fontFamily: '"DotGothic16", monospace',
+            color: "#ffe66d",
           },
         )
         .setOrigin(0.5);
@@ -131,8 +148,8 @@ export class ResultScene extends Phaser.Scene {
     this.add
       .text(GAME_WIDTH / 2, 320, `しあわせスコア: ${finalScore}`, {
         fontSize: "32px",
-        color: "#ffffff",
-        fontStyle: "bold",
+        fontFamily: '"DotGothic16", monospace',
+        color: "#ffe66d",
       })
       .setOrigin(0.5);
 
@@ -143,22 +160,31 @@ export class ResultScene extends Phaser.Scene {
     const yearbook = new YearbookMini(this, GAME_WIDTH / 2, 410);
     yearbook.setHighlights(this.gameState.seasonHighlights);
 
-    // Replay button
+    // Replay button (pixel style)
+    const btnX = GAME_WIDTH / 2;
+    const btnY = GAME_HEIGHT - 50;
+    const btnW = 220;
+    const btnH = 44;
+
+    const btnGfx = this.add.graphics();
+    this.drawPixelButton(btnGfx, btnX, btnY, btnW, btnH, 0x5a8a5a);
+
     const replayButton = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT - 50, "もういちど遊ぶ", {
+      .text(btnX, btnY, "もういちど遊ぶ", {
         fontSize: "22px",
-        color: "#ffffff",
-        backgroundColor: "#4a90d9",
-        padding: { x: 24, y: 8 },
+        fontFamily: '"DotGothic16", monospace',
+        color: "#f5e6d3",
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
 
     replayButton.on("pointerover", () => {
-      replayButton.setStyle({ backgroundColor: "#5aa0e9" });
+      btnGfx.clear();
+      this.drawPixelButton(btnGfx, btnX, btnY, btnW, btnH, 0x7ab87a);
     });
     replayButton.on("pointerout", () => {
-      replayButton.setStyle({ backgroundColor: "#4a90d9" });
+      btnGfx.clear();
+      this.drawPixelButton(btnGfx, btnX, btnY, btnW, btnH, 0x5a8a5a);
     });
 
     replayButton.on("pointerdown", () => {
@@ -169,6 +195,27 @@ export class ResultScene extends Phaser.Scene {
     });
   }
 
+  private drawPixelButton(
+    gfx: Phaser.GameObjects.Graphics,
+    cx: number,
+    cy: number,
+    w: number,
+    h: number,
+    fillColor: number,
+  ): void {
+    const x = cx - w / 2;
+    const y = cy - h / 2;
+
+    gfx.fillStyle(0x1a1a2a, 0.8);
+    gfx.fillRect(x + 2, y + 2, w, h);
+
+    gfx.fillStyle(fillColor, 1);
+    gfx.fillRect(x, y, w, h);
+
+    gfx.lineStyle(2, 0xffffff, 0.8);
+    gfx.strokeRect(x, y, w, h);
+  }
+
   private drawEarnedTitles(): void {
     const earnedIds = this.gameState.earnedTitles;
     if (earnedIds.length === 0) return;
@@ -177,8 +224,8 @@ export class ResultScene extends Phaser.Scene {
     this.add
       .text(GAME_WIDTH / 2, startY, "- 獲得した称号 -", {
         fontSize: "14px",
-        color: "#ffdd44",
-        fontStyle: "bold",
+        fontFamily: '"DotGothic16", monospace',
+        color: "#ffe66d",
       })
       .setOrigin(0.5);
 
@@ -190,7 +237,8 @@ export class ResultScene extends Phaser.Scene {
     this.add
       .text(GAME_WIDTH / 2, startY + 22, titleNames, {
         fontSize: "13px",
-        color: "#ffffff",
+        fontFamily: '"DotGothic16", monospace',
+        color: "#f5e6d3",
         wordWrap: { width: 600 },
         align: "center",
       })
