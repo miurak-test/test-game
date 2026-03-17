@@ -2,6 +2,8 @@ import Phaser from "phaser";
 import { GAME_WIDTH, GAME_HEIGHT } from "@/constants";
 import type { GameState } from "@/types";
 import { HappinessSystem } from "@/systems/HappinessSystem";
+import { YearbookMini } from "@/ui/YearbookMini";
+import { TITLE_DEFINITIONS } from "@/data/title-definitions";
 
 export class ResultScene extends Phaser.Scene {
   private gameState!: GameState;
@@ -134,8 +136,12 @@ export class ResultScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    // Season highlights (annual mini)
-    this.drawSeasonHighlights();
+    // Earned titles display
+    this.drawEarnedTitles();
+
+    // YearbookMini (season highlights)
+    const yearbook = new YearbookMini(this, GAME_WIDTH / 2, 410);
+    yearbook.setHighlights(this.gameState.seasonHighlights);
 
     // Replay button
     const replayButton = this.add
@@ -163,42 +169,31 @@ export class ResultScene extends Phaser.Scene {
     });
   }
 
-  private drawSeasonHighlights(): void {
-    const startY = 370;
-    const seasonLabels: Record<string, string> = {
-      spring: "春",
-      summer: "夏",
-      autumn: "秋",
-      winter: "冬",
-    };
+  private drawEarnedTitles(): void {
+    const earnedIds = this.gameState.earnedTitles;
+    if (earnedIds.length === 0) return;
 
+    const startY = 360;
     this.add
-      .text(GAME_WIDTH / 2, startY, "- 季節のハイライト -", {
-        fontSize: "16px",
-        color: "#aaaaaa",
+      .text(GAME_WIDTH / 2, startY, "- 獲得した称号 -", {
+        fontSize: "14px",
+        color: "#ffdd44",
         fontStyle: "bold",
       })
       .setOrigin(0.5);
 
-    const seasons = ["spring", "summer", "autumn", "winter"] as const;
-    for (let i = 0; i < seasons.length; i++) {
-      const season = seasons[i];
-      const highlight = this.gameState.seasonHighlights.find(
-        (h) => h.season === season,
-      );
+    const earnedDefs = TITLE_DEFINITIONS.filter((d) =>
+      earnedIds.includes(d.id),
+    );
+    const titleNames = earnedDefs.map((d) => d.name).join("  ");
 
-      const label = seasonLabels[season] ?? season;
-      const eventName = highlight ? highlight.description : "---";
-      const x = GAME_WIDTH / 2 - 250 + i * 170;
-      const y = startY + 30;
-
-      this.add
-        .text(x, y, `${label}: ${eventName}`, {
-          fontSize: "13px",
-          color: "#cccccc",
-          wordWrap: { width: 150 },
-        })
-        .setOrigin(0.5, 0);
-    }
+    this.add
+      .text(GAME_WIDTH / 2, startY + 22, titleNames, {
+        fontSize: "13px",
+        color: "#ffffff",
+        wordWrap: { width: 600 },
+        align: "center",
+      })
+      .setOrigin(0.5, 0);
   }
 }
