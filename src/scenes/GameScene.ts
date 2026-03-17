@@ -12,12 +12,22 @@ import { HappinessSystem } from "@/systems/HappinessSystem";
 import { DiceSystem } from "@/systems/DiceSystem";
 import { BoardSystem } from "@/systems/BoardSystem";
 import { EventSystem } from "@/systems/EventSystem";
+import { RomanceSystem } from "@/systems/RomanceSystem";
+import { TitleSystem } from "@/systems/TitleSystem";
+import { TutorialSystem } from "@/systems/TutorialSystem";
 import { SHORT_BOARD_LAYOUT } from "@/data/board-layout";
 import { EVENT_TEMPLATES } from "@/data/event-templates";
 import { EVENT_CHAINS } from "@/data/event-chains";
 import { RARE_EVENTS } from "@/data/rare-events";
 import { NPCS } from "@/data/npc-data";
+import { TITLE_DEFINITIONS } from "@/data/title-definitions";
 import { processTurn } from "@/scenes/helpers/turn-logic";
+
+import { StatusPanel } from "@/ui/StatusPanel";
+import { MiniLog } from "@/ui/MiniLog";
+import { DiceDisplay } from "@/ui/DiceDisplay";
+import { EventOverlay } from "@/ui/EventOverlay";
+import { ChoiceOverlay } from "@/ui/ChoiceOverlay";
 
 /** Tile type to color mapping for board rendering */
 const TILE_COLORS: Record<string, number> = {
@@ -39,24 +49,34 @@ export class GameScene extends Phaser.Scene {
   private diceSystem!: DiceSystem;
   private boardSystem!: BoardSystem;
   private eventSystem!: EventSystem;
+  private romanceSystem!: RomanceSystem;
+  private titleSystem!: TitleSystem;
+  private tutorialSystem!: TutorialSystem;
 
-  // UI elements
-  private statusText!: Phaser.GameObjects.Text;
+  // UI components
+  private statusPanel!: StatusPanel;
+  private miniLog!: MiniLog;
+  private diceDisplay!: DiceDisplay;
+  private eventOverlay!: EventOverlay;
+  private choiceOverlay!: ChoiceOverlay;
+
+  // Board rendering
   private turnText!: Phaser.GameObjects.Text;
-  private promptText!: Phaser.GameObjects.Text;
-  private logText!: Phaser.GameObjects.Text;
+  private tutorialText!: Phaser.GameObjects.Text;
   private playerMarker!: Phaser.GameObjects.Graphics;
   private boardGraphics!: Phaser.GameObjects.Graphics;
-
-  // Overlay container for events/choices
-  private overlayContainer!: Phaser.GameObjects.Container;
 
   constructor() {
     super({ key: "GameScene" });
   }
 
   init(data: { player: PlayerCharacter }): void {
-    this.gameState = createInitialGameState(data.player);
+    const initialState = createInitialGameState(data.player);
+
+    // Initialize affinities using RomanceSystem
+    initialState.affinities = RomanceSystem.createInitialAffinities(NPCS);
+
+    this.gameState = initialState;
     this.happinessSystem = new HappinessSystem();
     this.diceSystem = new DiceSystem();
     this.boardSystem = new BoardSystem(SHORT_BOARD_LAYOUT);
@@ -66,6 +86,9 @@ export class GameScene extends Phaser.Scene {
       RARE_EVENTS,
       NPCS,
     );
+    this.romanceSystem = new RomanceSystem();
+    this.titleSystem = new TitleSystem(TITLE_DEFINITIONS);
+    this.tutorialSystem = new TutorialSystem(this.gameState.isFirstPlay);
   }
 
   create(): void {
@@ -84,14 +107,13 @@ export class GameScene extends Phaser.Scene {
     this.playerMarker = this.add.graphics();
     this.drawPlayerMarker();
 
-    // Status panel (top area) - minimal text display
-    this.statusText = this.add
-      .text(10, 10, "", {
-        fontSize: "14px",
-        color: "#ffffff",
-        wordWrap: { width: 400 },
-      });
+    // StatusPanel (top area)
+    this.statusPanel = new StatusPanel(this, 10, 8);
+    const axes = HappinessSystem.toAxes(this.gameState.happiness);
+    this.statusPanel.updateAxes(axes);
+    this.statusPanel.updateFluctuation(this.gameState.fluctuation);
 
+    // Turn info (top right)
     this.turnText = this.add
       .text(GAME_WIDTH - 10, 10, "", {
         fontSize: "14px",
@@ -99,37 +121,63 @@ export class GameScene extends Phaser.Scene {
       })
       .setOrigin(1, 0);
 
-    // Prompt text (center)
-    this.promptText = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT - 60, "", {
-        fontSize: "18px",
+    // MiniLog (bottom left)
+    this.miniLog = new MiniLog(this, 10, GAME_HEIGHT - 118);
+
+    // DiceDisplay (bottom right)
+    this.diceDisplay = new DiceDisplay(this, GAME_WIDTH - 60, GAME_HEIGHT - 60);
+
+    // EventOverlay (centered)
+    this.eventOverlay = new EventOverlay(this);
+
+    // ChoiceOverlay (centered, higher depth)
+    this.choiceOverlay = new ChoiceOverlay(this);
+
+    // Tutorial text (center, hidden by default)
+    this.tutorialText = this.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, "", {
+        fontSize: "16px",
         color: "#ffffff",
-        backgroundColor: "#333333aa",
-        padding: { x: 16, y: 8 },
+        backgroundColor: "#336633cc",
+        padding: { x: 16, y: 10 },
+        wordWrap: { width: 500 },
+        align: "center",
       })
       .setOrigin(0.5)
+      .setDepth(120)
       .setVisible(false);
 
-    // Log text (bottom left)
-    this.logText = this.add
-      .text(10, GAME_HEIGHT - 30, "", {
-        fontSize: "12px",
-        color: "#888888",
+    this.updateTurnDisplay();
+    this.checkTutorialAndStart();
+  }
+
+  /** Check tutorial at the start of the game, then begin dice phase */
+  private checkTutorialAndStart(): void {
+    const step = this.tutorialSystem.checkTrigger(this.gameState);
+    if (step) {
+      this.showTutorialMessage(step.message, () => {
+        this.tutorialSystem.completeStep(step.id);
+        this.startTurnDicePhase();
       });
+    } else {
+      this.startTurnDicePhase();
+    }
+  }
 
-    // Overlay container for events/choices
-    this.overlayContainer = this.add.container(0, 0);
-    this.overlayContainer.setVisible(false);
+  private showTutorialMessage(message: string, onDismiss: () => void): void {
+    this.tutorialText.setText(message);
+    this.tutorialText.setVisible(true);
 
-    this.updateStatusDisplay();
-    this.startTurnDicePhase();
+    this.input.once("pointerdown", () => {
+      this.tutorialText.setVisible(false);
+      onDismiss();
+    });
   }
 
   private drawBoard(): void {
     this.boardGraphics.clear();
     const tiles = SHORT_BOARD_LAYOUT.tiles;
 
-    // Scale and offset board to fit in game area
     const offsetX = 30;
     const offsetY = 50;
     const scaleX = 1.4;
@@ -149,7 +197,6 @@ export class GameScene extends Phaser.Scene {
         4,
       );
 
-      // Tile border
       this.boardGraphics.lineStyle(1, 0xffffff, 0.3);
       this.boardGraphics.strokeRoundedRect(
         x - TILE_SIZE,
@@ -175,20 +222,13 @@ export class GameScene extends Phaser.Scene {
     const x = offsetX + currentTile.position.x * scaleX;
     const y = offsetY + currentTile.position.y * scaleY;
 
-    // Player dot
     this.playerMarker.fillStyle(0xffffff, 1);
     this.playerMarker.fillCircle(x, y, PLAYER_SIZE);
     this.playerMarker.lineStyle(2, 0x000000, 1);
     this.playerMarker.strokeCircle(x, y, PLAYER_SIZE);
   }
 
-  private updateStatusDisplay(): void {
-    const axes = HappinessSystem.toAxes(this.gameState.happiness);
-    this.statusText.setText(
-      `くらし: ${axes.kurashi} / つながり: ${axes.tsunagari} / じぶん: ${axes.jibun}` +
-        `  疲労: ${this.gameState.fluctuation.fatigue} 閃き: ${this.gameState.fluctuation.insight}`,
-    );
-
+  private updateTurnDisplay(): void {
     this.turnText.setText(
       `ターン ${this.gameState.currentTurn}/${this.gameState.totalTurns}` +
         `  ${this.getSeasonLabel(this.gameState.currentSeason)}`,
@@ -207,16 +247,17 @@ export class GameScene extends Phaser.Scene {
 
   private startTurnDicePhase(): void {
     this.gameState.turnPhase = "dice";
-    this.showPrompt("タップしてサイコロを振る");
+    this.diceDisplay.showValue(1);
 
     // Wait for click to roll dice
     this.input.once("pointerdown", () => {
       const roll = this.diceSystem.roll();
-      this.showPrompt(`サイコロ: ${roll}`);
-      this.logText.setText(`${roll} が出た！`);
 
-      this.time.delayedCall(800, () => {
-        this.startMovePhase(roll);
+      // Animate the dice, then proceed
+      this.diceDisplay.animateRoll(roll).then(() => {
+        this.time.delayedCall(400, () => {
+          this.startMovePhase(roll);
+        });
       });
     });
   }
@@ -224,64 +265,49 @@ export class GameScene extends Phaser.Scene {
   private startMovePhase(diceRoll: number): void {
     this.gameState.turnPhase = "move";
 
-    // Check if landing on a branch point
-    const currentTileId = SHORT_BOARD_LAYOUT.tiles[this.gameState.currentTileIndex]?.id;
+    const currentTileId =
+      SHORT_BOARD_LAYOUT.tiles[this.gameState.currentTileIndex]?.id;
     if (!currentTileId) return;
 
-    // Simulate movement to check if branch is encountered
+    // Preview where the player will land
     const previewTile = this.boardSystem.advance(currentTileId, diceRoll);
 
     if (this.boardSystem.isBranchPoint(previewTile.id)) {
-      this.showRouteChoice(diceRoll, previewTile);
+      // Check tutorial for first branch
+      const step = this.tutorialSystem.checkTrigger(
+        this.gameState,
+        undefined,
+        true,
+      );
+      if (step) {
+        this.showTutorialMessage(step.message, () => {
+          this.tutorialSystem.completeStep(step.id);
+          this.showRouteChoice(diceRoll);
+        });
+      } else {
+        this.showRouteChoice(diceRoll);
+      }
     } else {
       this.executeTurn(diceRoll);
     }
   }
 
-  private showRouteChoice(diceRoll: number, _branchTile: Tile): void {
-    this.hidePrompt();
-    this.showOverlay();
-
+  private showRouteChoice(diceRoll: number): void {
     const routes: { label: string; value: BranchRoute }[] = [
       { label: "農園ルート (farm)", value: "farm" },
       { label: "商店ルート (shop)", value: "shop" },
       { label: "村ルート (village)", value: "village" },
     ];
 
-    // Overlay title
-    const title = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 80, "ルートを選んでください", {
-        fontSize: "22px",
-        color: "#ffffff",
-        fontStyle: "bold",
-      })
-      .setOrigin(0.5);
-    this.overlayContainer.add(title);
+    const choices = routes.map((r) => ({
+      id: r.value,
+      text: r.label,
+      effects: {},
+    }));
 
-    for (let i = 0; i < routes.length; i++) {
-      const { label, value } = routes[i];
-      const y = GAME_HEIGHT / 2 - 20 + i * 50;
-
-      const btn = this.add
-        .text(GAME_WIDTH / 2, y, label, {
-          fontSize: "18px",
-          color: "#ffffff",
-          backgroundColor: "#4a6a8a",
-          padding: { x: 20, y: 8 },
-        })
-        .setOrigin(0.5)
-        .setInteractive({ useHandCursor: true });
-
-      btn.on("pointerover", () => btn.setStyle({ backgroundColor: "#5a7a9a" }));
-      btn.on("pointerout", () => btn.setStyle({ backgroundColor: "#4a6a8a" }));
-
-      btn.on("pointerdown", () => {
-        this.hideOverlay();
-        this.executeTurn(diceRoll, value);
-      });
-
-      this.overlayContainer.add(btn);
-    }
+    this.choiceOverlay.showChoices(choices).then((selectedId) => {
+      this.executeTurn(diceRoll, selectedId as BranchRoute);
+    });
   }
 
   private executeTurn(diceRoll: number, routeChoice?: BranchRoute): void {
@@ -296,177 +322,150 @@ export class GameScene extends Phaser.Scene {
 
     this.gameState = result.newState;
 
-    // Update player marker with tween-like animation
+    // Update board marker
     this.drawPlayerMarker();
-    this.updateStatusDisplay();
+    this.updateTurnDisplay();
 
-    // Show event
-    this.showEventOverlay(result.event, result.landedTile, result.isGameEnd);
+    // Update romance system for romance tiles
+    if (result.landedTile.type === "romance" && result.event.npc) {
+      const npcId = result.event.npc.id;
+      this.gameState.affinities = this.romanceSystem.updateAffinity(
+        this.gameState.affinities,
+        npcId,
+        5,
+      );
+      const aff = this.gameState.affinities.find((a) => a.npcId === npcId);
+      if (aff) {
+        const updated = this.romanceSystem.updateRomanceLevel(aff, true);
+        this.gameState.affinities = this.gameState.affinities.map((a) =>
+          a.npcId === npcId ? updated : a,
+        );
+      }
+    }
+
+    // Show event overlay
+    this.showEventPhase(result.event, result.landedTile, result.isGameEnd);
   }
 
-  private showEventOverlay(
+  private showEventPhase(
     event: ResolvedEvent,
     _tile: Tile,
     isGameEnd: boolean,
   ): void {
     this.gameState.turnPhase = "event";
-    this.showOverlay();
 
-    // Event title
-    const titleText = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100, event.title, {
-        fontSize: "22px",
-        color: "#ffdd44",
-        fontStyle: "bold",
-      })
-      .setOrigin(0.5);
-    this.overlayContainer.add(titleText);
-
-    // Event description
-    const descText = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60, event.description, {
-        fontSize: "16px",
-        color: "#ffffff",
-        wordWrap: { width: 500 },
-        align: "center",
-      })
-      .setOrigin(0.5);
-    this.overlayContainer.add(descText);
-
-    // NPC info
-    if (event.npc) {
-      const npcText = this.add
-        .text(
-          GAME_WIDTH / 2,
-          GAME_HEIGHT / 2 - 20,
-          `${event.npc.name} がいる`,
-          {
-            fontSize: "14px",
-            color: "#aaddff",
-          },
-        )
-        .setOrigin(0.5);
-      this.overlayContainer.add(npcText);
-    }
-
-    // Choices
-    if (event.choices.length > 0) {
-      this.showChoices(event, isGameEnd);
-    } else {
-      // No choices - continue button
-      this.addContinueButton(isGameEnd);
-    }
-  }
-
-  private showChoices(event: ResolvedEvent, isGameEnd: boolean): void {
-    const startY = GAME_HEIGHT / 2 + 20;
-
-    for (let i = 0; i < event.choices.length; i++) {
-      const choice = event.choices[i];
-      const y = startY + i * 40;
-
-      const btn = this.add
-        .text(GAME_WIDTH / 2, y, choice.text, {
-          fontSize: "16px",
-          color: "#ffffff",
-          backgroundColor: "#5a5a8a",
-          padding: { x: 16, y: 6 },
-        })
-        .setOrigin(0.5)
-        .setInteractive({ useHandCursor: true });
-
-      btn.on("pointerover", () => btn.setStyle({ backgroundColor: "#6a6a9a" }));
-      btn.on("pointerout", () => btn.setStyle({ backgroundColor: "#5a5a8a" }));
-
-      btn.on("pointerdown", () => {
-        // Apply choice effects by re-processing (simplified for now)
-        this.logText.setText(`選択: ${choice.text}`);
-        this.hideOverlay();
-        this.settlementPhase(isGameEnd);
-      });
-
-      this.overlayContainer.add(btn);
-    }
-  }
-
-  private addContinueButton(isGameEnd: boolean): void {
-    const btn = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 60, "つぎへ", {
-        fontSize: "18px",
-        color: "#ffffff",
-        backgroundColor: "#4a8a4a",
-        padding: { x: 24, y: 8 },
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
-
-    btn.on("pointerover", () => btn.setStyle({ backgroundColor: "#5a9a5a" }));
-    btn.on("pointerout", () => btn.setStyle({ backgroundColor: "#4a8a4a" }));
-
-    btn.on("pointerdown", () => {
-      this.hideOverlay();
-      this.settlementPhase(isGameEnd);
+    // Show event overlay
+    this.eventOverlay.show(event).then(() => {
+      // After event is dismissed, check for choices
+      if (event.choices.length > 0) {
+        // Check tutorial for first choice
+        const step = this.tutorialSystem.checkTrigger(
+          this.gameState,
+          event,
+        );
+        if (step) {
+          this.showTutorialMessage(step.message, () => {
+            this.tutorialSystem.completeStep(step.id);
+            this.showEventChoices(event, isGameEnd);
+          });
+        } else {
+          this.showEventChoices(event, isGameEnd);
+        }
+      } else {
+        this.settlementPhase(event, isGameEnd);
+      }
     });
-
-    this.overlayContainer.add(btn);
   }
 
-  private settlementPhase(isGameEnd: boolean): void {
+  private showEventChoices(
+    event: ResolvedEvent,
+    isGameEnd: boolean,
+  ): void {
+    this.choiceOverlay.showChoices(event.choices).then((_selectedChoiceId) => {
+      this.settlementPhase(event, isGameEnd);
+    });
+  }
+
+  private settlementPhase(lastEvent: ResolvedEvent, isGameEnd: boolean): void {
     this.gameState.turnPhase = "settlement";
-    this.updateStatusDisplay();
+
+    // Update StatusPanel
+    const axes = HappinessSystem.toAxes(this.gameState.happiness);
+    this.statusPanel.updateAxes(axes);
+    this.statusPanel.updateFluctuation(this.gameState.fluctuation);
+
+    // Update MiniLog with the latest happiness log
+    const latestLog =
+      this.gameState.happinessLog[this.gameState.happinessLog.length - 1];
+    if (latestLog) {
+      this.miniLog.addEntry(latestLog);
+    }
+
+    // Check for new titles
+    const newTitles = this.titleSystem.checkNewTitles(
+      this.gameState.happiness,
+      this.gameState.affinities,
+      this.gameState.eventHistory,
+      this.gameState.earnedTitles,
+    );
+
+    for (const title of newTitles) {
+      this.gameState.earnedTitles.push(title.id);
+    }
+
+    // Check tutorial triggers based on last event
+    const tutorialStep = this.tutorialSystem.checkTrigger(
+      this.gameState,
+      lastEvent,
+    );
 
     if (isGameEnd || this.gameState.currentTurn > this.gameState.totalTurns) {
-      // Transition to ResultScene
-      this.time.delayedCall(500, () => {
-        this.cameras.main.fadeOut(500);
-        this.cameras.main.once("camerafadeoutcomplete", () => {
-          this.scene.start("ResultScene", { gameState: this.gameState });
+      // Show title notification briefly, then transition to ResultScene
+      if (newTitles.length > 0) {
+        const titleMsg = newTitles
+          .map((t) => `称号獲得: ${t.name}`)
+          .join("\n");
+        this.showTutorialMessage(titleMsg, () => {
+          this.transitionToResult();
         });
-      });
+      } else {
+        this.transitionToResult();
+      }
     } else {
-      // Next turn
-      this.time.delayedCall(300, () => {
-        this.startTurnDicePhase();
-      });
+      // Show title notification or tutorial, then start next turn
+      if (newTitles.length > 0) {
+        const titleMsg = newTitles
+          .map((t) => `称号獲得: ${t.name}`)
+          .join("\n");
+        this.showTutorialMessage(titleMsg, () => {
+          if (tutorialStep) {
+            this.showTutorialMessage(tutorialStep.message, () => {
+              this.tutorialSystem.completeStep(tutorialStep.id);
+              this.startTurnDicePhase();
+            });
+          } else {
+            this.startTurnDicePhase();
+          }
+        });
+      } else if (tutorialStep) {
+        this.showTutorialMessage(tutorialStep.message, () => {
+          this.tutorialSystem.completeStep(tutorialStep.id);
+          this.startTurnDicePhase();
+        });
+      } else {
+        this.time.delayedCall(300, () => {
+          this.startTurnDicePhase();
+        });
+      }
     }
   }
 
-  private showPrompt(message: string): void {
-    this.promptText.setText(message);
-    this.promptText.setVisible(true);
-  }
-
-  private hidePrompt(): void {
-    this.promptText.setVisible(false);
-  }
-
-  private showOverlay(): void {
-    this.overlayContainer.removeAll(true);
-
-    // Semi-transparent background
-    const overlayBg = this.add.graphics();
-    overlayBg.fillStyle(0x000000, 0.7);
-    overlayBg.fillRect(
-      GAME_WIDTH / 2 - 300,
-      GAME_HEIGHT / 2 - 150,
-      600,
-      300,
-    );
-    overlayBg.lineStyle(2, 0xffffff, 0.5);
-    overlayBg.strokeRect(
-      GAME_WIDTH / 2 - 300,
-      GAME_HEIGHT / 2 - 150,
-      600,
-      300,
-    );
-    this.overlayContainer.add(overlayBg);
-
-    this.overlayContainer.setVisible(true);
-    this.overlayContainer.setDepth(100);
-  }
-
-  private hideOverlay(): void {
-    this.overlayContainer.removeAll(true);
-    this.overlayContainer.setVisible(false);
+  private transitionToResult(): void {
+    this.time.delayedCall(500, () => {
+      this.cameras.main.fadeOut(500);
+      this.cameras.main.once("camerafadeoutcomplete", () => {
+        this.scene.start("ResultScene", { gameState: this.gameState });
+      });
+    });
   }
 }
