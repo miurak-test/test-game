@@ -7,11 +7,41 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
+    // Logo title
     this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, "Loading...", {
-        fontSize: "32px",
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40, "ほのぼの人生すごろく", {
+        fontSize: "36px",
         color: "#ffffff",
+        fontStyle: "bold",
       })
       .setOrigin(0.5);
+
+    // Subtitle
+    this.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 10, "～四季めぐり～", {
+        fontSize: "24px",
+        color: "#aaddff",
+      })
+      .setOrigin(0.5);
+
+    // Loading indicator
+    const loadingText = this.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 80, "Loading...", {
+        fontSize: "18px",
+        color: "#888888",
+      })
+      .setOrigin(0.5);
+
+    // Fade in effect
+    this.cameras.main.fadeIn(500);
+
+    // Transition to TitleScene after 1 second
+    this.time.delayedCall(1000, () => {
+      loadingText.destroy();
+      this.cameras.main.fadeOut(300);
+      this.cameras.main.once("camerafadeoutcomplete", () => {
+        this.scene.start("TitleScene");
+      });
+    });
   }
 }
