@@ -5,8 +5,8 @@ import type { EventChoice } from "@/types";
 const BUTTON_WIDTH = 400;
 const BUTTON_HEIGHT = 40;
 const BUTTON_SPACING = 12;
-const BUTTON_COLOR = 0x5a5a8a;
-const BUTTON_HOVER_COLOR = 0x6a6a9a;
+const BUTTON_COLOR = 0x5a8a5a;
+const BUTTON_HOVER_COLOR = 0x7ab87a;
 
 /**
  * ChoiceOverlay: displays 2-3 choice buttons vertically.
@@ -67,15 +67,31 @@ export class ChoiceOverlay extends Phaser.GameObjects.Container {
   ): Phaser.GameObjects.Container {
     const container = this.scene.add.container(x, y);
 
-    // Button background
+    // Button background (pixel style)
     const bg = this.scene.add.graphics();
+    // Shadow
+    bg.fillStyle(0x1a1a2a, 0.6);
+    bg.fillRect(
+      -BUTTON_WIDTH / 2 + 1,
+      -BUTTON_HEIGHT / 2 + 1,
+      BUTTON_WIDTH,
+      BUTTON_HEIGHT,
+    );
+    // Main fill
     bg.fillStyle(BUTTON_COLOR, 1);
-    bg.fillRoundedRect(
+    bg.fillRect(
       -BUTTON_WIDTH / 2,
       -BUTTON_HEIGHT / 2,
       BUTTON_WIDTH,
       BUTTON_HEIGHT,
-      6,
+    );
+    // White border
+    bg.lineStyle(1, 0xffffff, 0.7);
+    bg.strokeRect(
+      -BUTTON_WIDTH / 2,
+      -BUTTON_HEIGHT / 2,
+      BUTTON_WIDTH,
+      BUTTON_HEIGHT,
     );
     container.add(bg);
 
@@ -83,7 +99,8 @@ export class ChoiceOverlay extends Phaser.GameObjects.Container {
     const label = this.scene.add
       .text(0, 0, text, {
         fontSize: "16px",
-        color: "#ffffff",
+        fontFamily: '"DotGothic16", monospace',
+        color: "#f5e6d3",
       })
       .setOrigin(0.5);
     container.add(label);
@@ -96,25 +113,52 @@ export class ChoiceOverlay extends Phaser.GameObjects.Container {
 
     hitZone.on("pointerover", () => {
       bg.clear();
+      // Shadow
+      bg.fillStyle(0x1a1a2a, 0.6);
+      bg.fillRect(
+        -BUTTON_WIDTH / 2 + 1,
+        -BUTTON_HEIGHT / 2 + 1,
+        BUTTON_WIDTH,
+        BUTTON_HEIGHT,
+      );
       bg.fillStyle(BUTTON_HOVER_COLOR, 1);
-      bg.fillRoundedRect(
+      bg.fillRect(
         -BUTTON_WIDTH / 2,
         -BUTTON_HEIGHT / 2,
         BUTTON_WIDTH,
         BUTTON_HEIGHT,
-        6,
+      );
+      bg.lineStyle(1, 0xffffff, 0.7);
+      bg.strokeRect(
+        -BUTTON_WIDTH / 2,
+        -BUTTON_HEIGHT / 2,
+        BUTTON_WIDTH,
+        BUTTON_HEIGHT,
       );
     });
 
     hitZone.on("pointerout", () => {
       bg.clear();
+      bg.fillStyle(0x1a1a2a, 0.6);
+      bg.fillRect(
+        -BUTTON_WIDTH / 2 + 1,
+        -BUTTON_HEIGHT / 2 + 1,
+        BUTTON_WIDTH,
+        BUTTON_HEIGHT,
+      );
       bg.fillStyle(BUTTON_COLOR, 1);
-      bg.fillRoundedRect(
+      bg.fillRect(
         -BUTTON_WIDTH / 2,
         -BUTTON_HEIGHT / 2,
         BUTTON_WIDTH,
         BUTTON_HEIGHT,
-        6,
+      );
+      bg.lineStyle(1, 0xffffff, 0.7);
+      bg.strokeRect(
+        -BUTTON_WIDTH / 2,
+        -BUTTON_HEIGHT / 2,
+        BUTTON_WIDTH,
+        BUTTON_HEIGHT,
       );
     });
 

@@ -18,16 +18,19 @@ export class MiniLog extends Phaser.GameObjects.Container {
 
     this.entryManager = new LogEntryManager(DEFAULT_MAX_ENTRIES);
 
-    // Background panel
+    // Background panel (RPG message window style)
     const bg = scene.add.graphics();
-    bg.fillStyle(0x000000, 0.4);
+    bg.fillStyle(0x4a4a68, 0.9);
     bg.fillRoundedRect(0, 0, 260, 100, 4);
+    bg.lineStyle(1, 0xffffff, 0.6);
+    bg.strokeRoundedRect(0, 0, 260, 100, 4);
     this.add(bg);
 
     // Log text
     this.logText = scene.add.text(6, 4, "", {
-      fontSize: "11px",
-      color: "#aaaaaa",
+      fontSize: "13px",
+      fontFamily: '"DotGothic16", monospace',
+      color: "#f5e6d3",
       lineSpacing: 2,
       wordWrap: { width: 248 },
     });
