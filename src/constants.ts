@@ -28,6 +28,8 @@ export const BRANCH_ROUTES: BranchRoute[] = ["farm", "shop", "village"];
 export const SHORT_MODE_TURNS = 20;
 export const FATIGUE_DECAY_PER_REST = 3;
 export const INSIGHT_BONUS_THRESHOLD = 5;
+export const MAX_FATIGUE = 10;
+export const MAX_INSIGHT = 10;
 
 export const ROUTE_BUFFS: Record<BranchRoute, Partial<HappinessPillars>> = {
   farm: { nature: 1 },
