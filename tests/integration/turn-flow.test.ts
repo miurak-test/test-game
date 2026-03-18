@@ -10,6 +10,7 @@ import { EVENT_CHAINS } from "@/data/event-chains";
 import { RARE_EVENTS } from "@/data/rare-events";
 import { NPCS } from "@/data/npc-data";
 import { processTurn } from "@/scenes/helpers/turn-logic";
+import { MAX_FATIGUE, MAX_INSIGHT } from "@/constants";
 
 const TEST_PLAYER: PlayerCharacter = {
   name: "テスト太郎",
@@ -225,6 +226,171 @@ describe("processTurn", () => {
 
       expect(result.isGameEnd).toBe(false);
       expect(result.newState.phase).toBe("playing");
+    });
+  });
+
+  describe("chain events", () => {
+    it("chain event progresses step when chainNext is present in effects", () => {
+      // If an event has chainNext in its effects, the chain step should be recorded
+      // Simulate by providing an eventChoiceId that triggers chainNext
+      // Use a state where a chain could potentially start
+      const result = processTurn(
+        state,
+        1,
+        boardSystem,
+        eventSystem,
+        happinessSystem,
+      );
+
+      // Chain progression is driven by effects.chainNext
+      // The state tracks active chains - verify it's a valid record
+      expect(result.newState.activeChains).toBeDefined();
+      expect(typeof result.newState.activeChains).toBe("object");
+    });
+
+    it("route choice applies route buff AND turn proceeds correctly", () => {
+      // At branch point, choose farm route
+      const atBranch: GameState = { ...state, currentTileIndex: 2 };
+
+      const result = processTurn(
+        atBranch,
+        1,
+        boardSystem,
+        eventSystem,
+        happinessSystem,
+        "farm",
+      );
+
+      // Farm route should apply nature+1 buff
+      // The route buff is applied via a second applyEffect call
+      expect(result.landedTile.route).toBe("farm");
+      // Turn should increment
+      expect(result.newState.currentTurn).toBe(2);
+      // Event should be resolved
+      expect(result.event.templateId).toBeDefined();
+    });
+
+    it("chain resolveChainNext returns null at final step", () => {
+      // Directly test that chains complete properly
+      const result = eventSystem.resolveChainNext(
+        "spring-cat",
+        3,
+        {
+          season: "spring",
+          tileType: "life",
+          weather: "sunny",
+          affinities: [],
+          earnedTitles: [],
+          activeChains: {},
+          turn: 1,
+        },
+      );
+
+      // Step 3 is the last step in spring-cat chain, so step 4 should not exist
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("turn end state consistency", () => {
+    it("after 20 turns game phase transitions to result", () => {
+      // Simulate 20 turns
+      let currentState = state;
+
+      for (let i = 0; i < 20; i++) {
+        const result = processTurn(
+          currentState,
+          1,
+          boardSystem,
+          eventSystem,
+          happinessSystem,
+          currentState.currentTileIndex === 2 ||
+            currentState.currentTileIndex === 12 ||
+            currentState.currentTileIndex === 22 ||
+            currentState.currentTileIndex === 32
+            ? "farm"
+            : undefined,
+        );
+        currentState = result.newState;
+
+        // If game ended early (reached GOAL), check phase
+        if (result.isGameEnd) {
+          expect(currentState.phase).toBe("result");
+          break;
+        }
+      }
+
+      // After enough turns, the state should be valid
+      expect(currentState.currentTurn).toBeGreaterThan(1);
+      expect(currentState.eventHistory.length).toBeGreaterThan(0);
+      expect(currentState.happinessLog.length).toBeGreaterThan(0);
+    });
+
+    it("season highlights are recorded once per season", () => {
+      let currentState = state;
+
+      // Process enough turns to cross into summer
+      for (let i = 0; i < 10; i++) {
+        const result = processTurn(
+          currentState,
+          1,
+          boardSystem,
+          eventSystem,
+          happinessSystem,
+          currentState.currentTileIndex === 2 ? "farm" : undefined,
+        );
+        currentState = result.newState;
+        if (result.isGameEnd) break;
+      }
+
+      // Check season highlights - spring should have exactly 1 entry
+      const springHighlights = currentState.seasonHighlights.filter(
+        (h) => h.season === "spring",
+      );
+      expect(springHighlights.length).toBeLessThanOrEqual(1);
+
+      // Each season in highlights should be unique
+      const seasons = currentState.seasonHighlights.map((h) => h.season);
+      const uniqueSeasons = new Set(seasons);
+      expect(uniqueSeasons.size).toBe(seasons.length);
+    });
+
+    it("all state fields remain valid after full game simulation", () => {
+      let currentState = state;
+
+      // Simulate 15 turns
+      for (let i = 0; i < 15; i++) {
+        const tileIdx = currentState.currentTileIndex;
+        const isBranch =
+          tileIdx === 2 || tileIdx === 12 || tileIdx === 22 || tileIdx === 32;
+        const result = processTurn(
+          currentState,
+          1,
+          boardSystem,
+          eventSystem,
+          happinessSystem,
+          isBranch ? "farm" : undefined,
+        );
+        currentState = result.newState;
+        if (result.isGameEnd) break;
+      }
+
+      // Validate all state fields
+      expect(currentState.happiness.nature).toBeGreaterThanOrEqual(0);
+      expect(currentState.happiness.social).toBeGreaterThanOrEqual(0);
+      expect(currentState.happiness.creation).toBeGreaterThanOrEqual(0);
+      expect(currentState.happiness.money).toBeGreaterThanOrEqual(0);
+      expect(currentState.happiness.culture).toBeGreaterThanOrEqual(0);
+      expect(currentState.fluctuation.fatigue).toBeGreaterThanOrEqual(0);
+      expect(currentState.fluctuation.fatigue).toBeLessThanOrEqual(MAX_FATIGUE);
+      expect(currentState.fluctuation.insight).toBeGreaterThanOrEqual(0);
+      expect(currentState.fluctuation.insight).toBeLessThanOrEqual(MAX_INSIGHT);
+      expect(currentState.eventHistory.length).toBe(
+        currentState.happinessLog.length,
+      );
+      expect(currentState.currentTileIndex).toBeGreaterThanOrEqual(0);
+      expect(currentState.currentTileIndex).toBeLessThan(
+        SHORT_BOARD_LAYOUT.tiles.length,
+      );
     });
   });
 

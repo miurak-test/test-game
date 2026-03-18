@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { HappinessSystem } from "@/systems/HappinessSystem";
+import { MAX_FATIGUE, MAX_INSIGHT } from "@/constants";
 import type { HappinessPillars, FluctuationState } from "@/types";
 
 describe("HappinessSystem", () => {
@@ -133,6 +134,106 @@ describe("HappinessSystem", () => {
       );
 
       expect(newState.happiness.nature).toBe(0); // clamped to 0
+    });
+
+    it("fatigue at MAX + positive event applies maximum attenuation", () => {
+      const state = {
+        happiness: { nature: 10, social: 10, creation: 10, money: 10, culture: 10 },
+        fluctuation: { fatigue: MAX_FATIGUE, insight: 0 },
+      };
+      const rawChanges: Partial<HappinessPillars> = { nature: 5 };
+
+      const { newState, log } = system.applyEffect(
+        state,
+        rawChanges,
+        "test-max-fatigue",
+        6,
+        "spring",
+      );
+
+      // fatigue=MAX_FATIGUE(10), floor(10/3)=3 attenuation
+      // nature: max(0, 5 - 3) = 2
+      expect(newState.happiness.nature).toBe(12); // 10 + 2
+      expect(log.fatigueEffect).toBe(-3);
+      // fatigue stays at MAX (10 + 1 would be 11 but capped to MAX_FATIGUE)
+      expect(newState.fluctuation.fatigue).toBe(MAX_FATIGUE);
+    });
+
+    it("insight at MAX + negative event caps insight at MAX_INSIGHT", () => {
+      const state = {
+        happiness: { nature: 10, social: 10, creation: 10, money: 10, culture: 10 },
+        fluctuation: { fatigue: 0, insight: MAX_INSIGHT },
+      };
+      const rawChanges: Partial<HappinessPillars> = { nature: -1 };
+
+      const { newState, log } = system.applyEffect(
+        state,
+        rawChanges,
+        "test-max-insight",
+        7,
+        "summer",
+      );
+
+      // insight=MAX_INSIGHT(10), floor(10/5)=2 bonus to creation and culture
+      expect(log.insightEffect).toBe(2);
+      expect(newState.happiness.creation).toBe(12); // 10 + 2
+      expect(newState.happiness.culture).toBe(12); // 10 + 2
+      // insight stays at MAX (10 + 1 would be 11 but capped to MAX_INSIGHT)
+      expect(newState.fluctuation.insight).toBe(MAX_INSIGHT);
+    });
+
+    it("fatigue high + insight high simultaneously applies both effects", () => {
+      const state = {
+        happiness: { nature: 10, social: 10, creation: 10, money: 10, culture: 10 },
+        fluctuation: { fatigue: 9, insight: 10 },
+      };
+      // Both positive and negative changes
+      const rawChanges: Partial<HappinessPillars> = { nature: 5, social: -1 };
+
+      const { newState, log } = system.applyEffect(
+        state,
+        rawChanges,
+        "test-both",
+        8,
+        "autumn",
+      );
+
+      // fatigue=9, floor(9/3)=3 attenuation on positive
+      // insight=10, floor(10/5)=2 bonus on creation/culture
+      // nature: max(0, 5 - 3) = 2 -> 10 + 2 = 12
+      // social: -1 (negative, no attenuation) -> 10 - 1 = 9
+      // creation: 0 + 2 (insight bonus) = 2 -> 10 + 2 = 12
+      // culture: 0 + 2 (insight bonus) = 2 -> 10 + 2 = 12
+      expect(newState.happiness.nature).toBe(12);
+      expect(newState.happiness.social).toBe(9);
+      expect(newState.happiness.creation).toBe(12);
+      expect(newState.happiness.culture).toBe(12);
+      expect(log.fatigueEffect).toBe(-3);
+      expect(log.insightEffect).toBe(2);
+      // fatigue 9+1=10 (capped at MAX), insight 10+1=10 (capped at MAX)
+      expect(newState.fluctuation.fatigue).toBe(MAX_FATIGUE);
+      expect(newState.fluctuation.insight).toBe(MAX_INSIGHT);
+    });
+
+    it("fatigue exactly at threshold 3 starts attenuation", () => {
+      const state = {
+        happiness: { nature: 5, social: 5, creation: 5, money: 5, culture: 5 },
+        fluctuation: { fatigue: 3, insight: 0 },
+      };
+      const rawChanges: Partial<HappinessPillars> = { nature: 2 };
+
+      const { newState, log } = system.applyEffect(
+        state,
+        rawChanges,
+        "test-threshold",
+        9,
+        "winter",
+      );
+
+      // fatigue=3, floor(3/3)=1 attenuation
+      // nature: max(0, 2 - 1) = 1 -> 5 + 1 = 6
+      expect(newState.happiness.nature).toBe(6);
+      expect(log.fatigueEffect).toBe(-1);
     });
   });
 

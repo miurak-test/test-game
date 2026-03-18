@@ -10,6 +10,7 @@ import { BoardSystem } from "@/systems/BoardSystem";
 import { EventSystem } from "@/systems/EventSystem";
 import { HappinessSystem } from "@/systems/HappinessSystem";
 import { NPCS } from "@/data/npc-data";
+import { MAX_FATIGUE, MAX_INSIGHT } from "@/constants";
 
 export interface TurnResult {
   newState: GameState;
@@ -117,12 +118,12 @@ export function processTurn(
     fluctuation = routeResult.newState.fluctuation;
   }
 
-  // Apply fatigue/insight modifiers from event and route
+  // Apply fatigue/insight modifiers from event and route (capped at MAX values)
   fluctuation = {
     fatigue: Math.max(
       0,
       Math.min(
-        100,
+        MAX_FATIGUE,
         fluctuation.fatigue +
           (chosenEffects.fatigue ?? 0) +
           routeBuff.fatigueMod,
@@ -131,7 +132,7 @@ export function processTurn(
     insight: Math.max(
       0,
       Math.min(
-        100,
+        MAX_INSIGHT,
         fluctuation.insight +
           (chosenEffects.insight ?? 0) +
           routeBuff.insightMod,

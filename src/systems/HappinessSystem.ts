@@ -5,7 +5,12 @@ import type {
   HappinessChangeLog,
   Season,
 } from "@/types";
-import { FATIGUE_DECAY_PER_REST, INSIGHT_BONUS_THRESHOLD } from "@/constants";
+import {
+  FATIGUE_DECAY_PER_REST,
+  INSIGHT_BONUS_THRESHOLD,
+  MAX_FATIGUE,
+  MAX_INSIGHT,
+} from "@/constants";
 
 export class HappinessSystem {
   /** 5 pillars to 3 axes conversion */
@@ -35,14 +40,14 @@ export class HappinessSystem {
     );
     const hasNegative = Object.values(rawChanges).some((v) => (v ?? 0) < 0);
 
-    // 2. Accumulate fatigue on positive changes
+    // 2. Accumulate fatigue on positive changes (capped at MAX_FATIGUE)
     if (positiveSum > 0) {
-      fluctuation.fatigue += 1;
+      fluctuation.fatigue = Math.min(MAX_FATIGUE, fluctuation.fatigue + 1);
     }
 
-    // 3. Accumulate insight on negative changes
+    // 3. Accumulate insight on negative changes (capped at MAX_INSIGHT)
     if (hasNegative) {
-      fluctuation.insight += 1;
+      fluctuation.insight = Math.min(MAX_INSIGHT, fluctuation.insight + 1);
     }
 
     // 4. Fatigue attenuation: if fatigue >= 3, reduce positive changes

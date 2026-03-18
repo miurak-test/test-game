@@ -159,6 +159,109 @@ describe("TitleSystem", () => {
     });
   });
 
+  describe("condition boundary tests", () => {
+    it("pillar_threshold: exact threshold value earns title", () => {
+      // culture_award requires culture >= 15
+      const pillars = makePillars({ culture: 15 });
+      const result = system.checkNewTitles(pillars, [], [], []);
+      expect(result.map((t) => t.id)).toContain("culture_award");
+    });
+
+    it("pillar_threshold: below threshold does not earn title", () => {
+      // culture_award requires culture >= 15
+      const pillars = makePillars({ culture: 14 });
+      const result = system.checkNewTitles(pillars, [], [], []);
+      expect(result.map((t) => t.id)).not.toContain("culture_award");
+    });
+
+    it("axis_balance: exact minEach value earns title", () => {
+      // balance_award requires all axes >= 8
+      // kurashi = nature + money, tsunagari = social, jibun = creation + culture
+      const pillars = makePillars({
+        nature: 4,
+        money: 4,   // kurashi = 8
+        social: 8,   // tsunagari = 8
+        creation: 4,
+        culture: 4,  // jibun = 8
+      });
+      const result = system.checkNewTitles(pillars, [], [], []);
+      expect(result.map((t) => t.id)).toContain("balance_award");
+    });
+
+    it("axis_balance: one axis at minEach-1 does not earn title", () => {
+      const pillars = makePillars({
+        nature: 4,
+        money: 4,   // kurashi = 8
+        social: 7,   // tsunagari = 7 (below 8)
+        creation: 4,
+        culture: 4,  // jibun = 8
+      });
+      const result = system.checkNewTitles(pillars, [], [], []);
+      expect(result.map((t) => t.id)).not.toContain("balance_award");
+    });
+
+    it("affinity_count: exact count at exact minLevel earns title", () => {
+      // friendship_master requires 4 NPCs with level >= 50
+      const affinities = [
+        makeAffinity("a", 50),
+        makeAffinity("b", 50),
+        makeAffinity("c", 50),
+        makeAffinity("d", 50),
+      ];
+      const result = system.checkNewTitles(makePillars(), affinities, [], []);
+      expect(result.map((t) => t.id)).toContain("friendship_master");
+    });
+
+    it("affinity_count: one NPC below minLevel does not earn title", () => {
+      const affinities = [
+        makeAffinity("a", 50),
+        makeAffinity("b", 49), // below threshold
+        makeAffinity("c", 50),
+        makeAffinity("d", 50),
+      ];
+      const result = system.checkNewTitles(makePillars(), affinities, [], []);
+      expect(result.map((t) => t.id)).not.toContain("friendship_master");
+    });
+
+    it("event_count: exact count earns title", () => {
+      // adventurer requires 15 events
+      const events = Array.from({ length: 15 }, (_, i) =>
+        makeEvent(`evt-${i}`),
+      );
+      const result = system.checkNewTitles(makePillars(), [], events, []);
+      expect(result.map((t) => t.id)).toContain("adventurer");
+    });
+
+    it("event_count: one below count does not earn title", () => {
+      const events = Array.from({ length: 14 }, (_, i) =>
+        makeEvent(`evt-${i}`),
+      );
+      const result = system.checkNewTitles(makePillars(), [], events, []);
+      expect(result.map((t) => t.id)).not.toContain("adventurer");
+    });
+
+    it("multiple titles earned in same turn", () => {
+      // Set all pillars high enough for multiple pillar_threshold titles
+      const pillars = makePillars({
+        nature: 15,
+        social: 15,
+        creation: 15,
+        money: 15,
+        culture: 15,
+      });
+      const result = system.checkNewTitles(pillars, [], [], []);
+      const ids = result.map((t) => t.id);
+
+      // Should earn at least culture_award, nature_lover, merchant, social_butterfly, creator
+      expect(ids).toContain("culture_award");
+      expect(ids).toContain("nature_lover");
+      expect(ids).toContain("merchant");
+      expect(ids).toContain("social_butterfly");
+      expect(ids).toContain("creator");
+      expect(result.length).toBeGreaterThanOrEqual(5);
+    });
+  });
+
   describe("getUnlockedEventIds", () => {
     it("returns event IDs linked to earned titles", () => {
       const result = system.getUnlockedEventIds([
